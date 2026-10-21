@@ -848,27 +848,50 @@ void CRecoverAsideDlg::ComputeFolderSizes()
     }
 }
 
-void CRecoverAsideDlg::RebuildView()
+CString CRecoverAsideDlg::FilterText() const
 {
     CString filter;
     GetDlgItemText(IDC_FILTER, filter);
     filter.Trim();
-    bool onlyGood = IsDlgButtonChecked(IDC_ONLYGOOD) == BST_CHECKED;
+    return filter;
+}
+
+bool CRecoverAsideDlg::OnlyGood() const
+{
+    return IsDlgButtonChecked(IDC_ONLYGOOD) == BST_CHECKED;
+}
+
+bool CRecoverAsideDlg::MatchesText(const DeletedEntry& e, const CString& filter)
+{
+    return filter.IsEmpty() || StrStrIW(e.name, filter) || StrStrIW(e.path, filter);
+}
+
+void CRecoverAsideDlg::RebuildView()
+{
+    CString filter = FilterText();
+    bool onlyGood = OnlyGood();
     bool subfolders = IsDlgButtonChecked(IDC_SUBFOLDERS) == BST_CHECKED;
     // Only the scanned drive has results; another drive's folder shows nothing until it is scanned.
     bool active = m_haveScan && m_scopeLetter == ScanLetter();
 
     m_view.clear();
     m_view.reserve(m_entries.size());
+    m_hiddenByGood = m_hiddenByText = 0;
     for (int i = 0; active && i < (int)m_entries.size(); ++i)
     {
         const DeletedEntry& e = m_entries[i];
         if (!InScope(e, subfolders))
             continue;
         if (onlyGood && e.state != RecoverState::Good)
+        {
+            ++m_hiddenByGood;
             continue;
-        if (!filter.IsEmpty() && !StrStrIW(e.name, filter) && !StrStrIW(e.path, filter))
+        }
+        if (!MatchesText(e, filter))
+        {
+            ++m_hiddenByText;
             continue;
+        }
         m_view.push_back(i);
     }
     SortView();
@@ -994,8 +1017,10 @@ void CRecoverAsideDlg::ApplyScanOverlay()
         else if (m_folders[n].state != FolderState::Live)
             m_folders[n].state = FolderState::Deleted;
     }
-    for (const DeletedEntry& e : m_entries)
+    m_entryNode.assign(m_entries.size(), -1);
+    for (size_t i = 0; i < m_entries.size(); ++i)
     {
+        const DeletedEntry& e = m_entries[i];
         if (e.isDir)
         {
             int n = FolderNodeFor(s, e.path + L"\\" + e.name);
@@ -1005,6 +1030,7 @@ void CRecoverAsideDlg::ApplyScanOverlay()
         else
         {
             int n = FolderNodeFor(s, e.path);
+            m_entryNode[i] = n;
             if (n >= 0)
                 ++m_folders[n].deletedFiles;
         }
@@ -1013,6 +1039,37 @@ void CRecoverAsideDlg::ApplyScanOverlay()
     for (int i = (int)m_folders.size() - 1; i >= 0; --i)
         if (m_folders[i].letter == s && m_folders[i].parent >= 0)
             m_folders[m_folders[i].parent].deletedFiles += m_folders[i].deletedFiles;
+    ComputeShownCounts();
+}
+
+void CRecoverAsideDlg::ComputeShownCounts()
+{
+    // How many deleted files under each folder pass the current filters (the "1" in "1 of 3").
+    wchar_t s = ScanLetter();
+    for (FolderNode& f : m_folders)
+        f.shownFiles = 0;
+    if (!s)
+        return;
+    CString filter = FilterText();
+    bool onlyGood = OnlyGood();
+    for (size_t i = 0; i < m_entries.size() && i < m_entryNode.size(); ++i)
+    {
+        const DeletedEntry& e = m_entries[i];
+        int n = m_entryNode[i];
+        if (n < 0 || e.isDir || (onlyGood && e.state != RecoverState::Good) || !MatchesText(e, filter))
+            continue;
+        ++m_folders[n].shownFiles;
+    }
+    for (int i = (int)m_folders.size() - 1; i >= 0; --i)
+        if (m_folders[i].letter == s && m_folders[i].parent >= 0)
+            m_folders[m_folders[i].parent].shownFiles += m_folders[i].shownFiles;
+}
+
+void CRecoverAsideDlg::RefreshTreeLabels()
+{
+    for (int i = 0; i < (int)m_folders.size(); ++i)
+        if (m_folders[i].item)
+            m_tree.SetItemText(m_folders[i].item, NodeLabel(i));
 }
 
 bool CRecoverAsideDlg::IsNodeVisible(int node) const
@@ -1040,7 +1097,10 @@ CString CRecoverAsideDlg::NodeLabel(int node) const
     if (f.letter == ScanLetter() && f.deletedFiles)
     {
         CString c;
-        c.Format(f.parent < 0 ? L"  (%zu deleted files)" : L"  (%zu)", f.deletedFiles);
+        if (OnlyGood() || !FilterText().IsEmpty())   // filters on: "shown of total"
+            c.Format(f.parent < 0 ? L"  (%zu of %zu deleted files)" : L"  (%zu of %zu)", f.shownFiles, f.deletedFiles);
+        else
+            c.Format(f.parent < 0 ? L"  (%zu deleted files)" : L"  (%zu)", f.deletedFiles);
         s += c;
     }
     if (f.state == FolderState::Deleted)
@@ -1167,15 +1227,33 @@ void CRecoverAsideDlg::SetScope(const CStringW& path)
 
     if (m_busy || !m_scopeLetter)
         return;
+    // Say which filter hides how many items, so an empty list is never mistaken for "nothing found".
+    CString hidden;
+    if (m_hiddenByGood)
+        hidden.Format(L"%zu hidden by \"Only show fully recoverable\"", m_hiddenByGood);
+    if (m_hiddenByText)
+    {
+        CString t;
+        t.Format(L"%s%zu hidden by the filter \"%s\"", hidden.IsEmpty() ? L"" : L"; ",
+                 m_hiddenByText, (LPCWSTR)FilterText());
+        hidden += t;
+    }
+    LPCWSTR where = IsDlgButtonChecked(IDC_SUBFOLDERS) == BST_CHECKED ? L" and its subfolders" : L"";
+
     CString s;
     if (m_scopeLetter != ScanLetter())
         s.Format(L"%c: has not been scanned yet. Click Scan to find deleted items.", m_scopeLetter);
+    else if (m_view.empty() && hidden.IsEmpty())
+        s.Format(L"No deleted items found in %c:%s%s.", m_scopeLetter, shownPath, where);
     else if (m_view.empty())
-        s.Format(L"No deleted items found in %c:%s.", m_scopeLetter, shownPath);
+        s.Format(L"No deleted items shown in %c:%s%s: %s. Change the filter to see them.",
+                 m_scopeLetter, shownPath, where, (LPCWSTR)hidden);
+    else if (!hidden.IsEmpty())
+        s.Format(L"Showing %zu deleted item(s) in %c:%s%s (%s). Double-click a folder to open it.",
+                 m_view.size(), m_scopeLetter, shownPath, where, (LPCWSTR)hidden);
     else
-        s.Format(L"Showing %zu deleted item(s) in %c:%s%s. Double-click a folder to open it.", m_view.size(),
-                 m_scopeLetter, shownPath,
-                 IsDlgButtonChecked(IDC_SUBFOLDERS) == BST_CHECKED ? L" and its subfolders" : L"");
+        s.Format(L"Showing %zu deleted item(s) in %c:%s%s. Double-click a folder to open it.",
+                 m_view.size(), m_scopeLetter, shownPath, where);
     SetStatus(s);
 }
 
@@ -1318,7 +1396,9 @@ void CRecoverAsideDlg::OnColumnClick(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CRecoverAsideDlg::OnFilterChange()
 {
-    RebuildView();
+    ComputeShownCounts();
+    RefreshTreeLabels();
+    SetScope(m_scope);      // rebuilds the list and explains anything the filters hide
 }
 
 CString CRecoverAsideDlg::CellText(int idx, int col) const

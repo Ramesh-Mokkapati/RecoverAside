@@ -61,6 +61,7 @@ private:
         int         parent = -1;    // -1 for a drive
         std::vector<int> children;
         size_t      deletedFiles = 0;   // deleted files in this folder and below (scanned drive only)
+        size_t      shownFiles = 0;     // ...of which pass the current filters
         HTREEITEM   item = nullptr;
         bool        populated = false;  // tree items inserted for children
         bool        enumerated = false; // existing subfolders listed from the file system
@@ -104,6 +105,11 @@ private:
     int  FolderNodeFor(wchar_t letter, const CStringW& path);
     void EnumerateLive(int node);
     void ApplyScanOverlay();
+    void ComputeShownCounts();
+    void RefreshTreeLabels();
+    CString FilterText() const;
+    bool OnlyGood() const;
+    static bool MatchesText(const DeletedEntry& e, const CString& filter);
     void ResetTree();
     void InsertNode(HTREEITEM parentItem, int node);
     void PopulateChildren(int node);
@@ -137,6 +143,9 @@ private:
     std::unordered_map<ULONGLONG, std::vector<int>> m_children;   // parent record -> entries
     std::vector<int> m_view;
     std::vector<int> m_userSkipped;     // damaged files the user chose not to recover
+    std::vector<int> m_entryNode;       // tree node of each deleted file's folder
+    size_t m_hiddenByGood = 0;          // in-scope items hidden by "Only show fully recoverable"
+    size_t m_hiddenByText = 0;          // in-scope items hidden by the filter text
     std::vector<FolderInfo> m_scanFolders;                  // folders reported by the last scan
     std::vector<FolderNode> m_folders;                      // drives first, then folders
     std::unordered_map<std::wstring, int> m_folderIndex;    // letter + lower-case path -> node
