@@ -1,0 +1,83 @@
+#include "resource.h"
+#include "winres.h"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+IDD_RECOVERASIDE_DIALOG DIALOGEX 0, 0, 560, 330
+STYLE DS_SHELLFONT | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "RecoverAside - NTFS File && Folder Recovery"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Source volume (read-only scan):",IDC_STATIC_SRC,7,9,110,8
+    COMBOBOX        IDC_SOURCE,118,7,252,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Scan",IDC_SCAN,376,6,60,14
+    PUSHBUTTON      "Re&fresh Drives",IDC_REFRESH,440,6,70,14
+
+    LTEXT           "Filter:",IDC_STATIC_FILTER,7,28,24,8
+    EDITTEXT        IDC_FILTER,34,26,150,13,ES_AUTOHSCROLL
+    CONTROL         "Only show fully recoverable",IDC_ONLYGOOD,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,192,27,120,10
+    PUSHBUTTON      "Check &All Shown",IDC_CHECKALL,376,25,60,14
+    PUSHBUTTON      "&Uncheck All",IDC_UNCHECKALL,440,25,70,14
+
+    LTEXT           "Look in:",IDC_STATIC_SCOPE,7,46,28,8
+    EDITTEXT        IDC_SCOPE,36,44,226,13,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "&Browse Folder...",IDC_BROWSE,266,43,62,14
+    CONTROL         "Include su&bfolders",IDC_SUBFOLDERS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,334,45,80,10
+    CONTROL         "Show &deleted folders in tree",IDC_SHOWDELDIRS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,418,45,135,10
+
+    CONTROL         "",IDC_TREE,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP | WS_BORDER | WS_TABSTOP,7,62,170,182
+    CONTROL         "",IDC_LIST,"SysListView32",LVS_REPORT | LVS_OWNERDATA | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,181,62,372,182
+
+    LTEXT           "Nothing checked.",IDC_SELINFO,7,250,546,8
+
+    LTEXT           "Destination (different physical disk):",IDC_STATIC_DEST,7,266,128,8
+    COMBOBOX        IDC_DEST,136,264,417,200,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "",IDC_DESTINFO,7,281,546,8
+
+    CONTROL         "",IDC_PROGRESS,"msctls_progress32",WS_BORDER,7,295,546,10
+    LTEXT           "Ready.",IDC_STATUS,7,312,355,8
+    PUSHBUTTON      "S&top",IDC_STOP,366,309,55,14,WS_DISABLED
+    DEFPUSHBUTTON   "&Recover Checked...",IDC_RECOVER,425,309,74,14
+    PUSHBUTTON      "Close",IDCANCEL,503,309,50,14
+END
+
+IDD_DAMAGED_FILES DIALOGEX 0, 0, 420, 250
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Warning - Some Files May Be Damaged"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_DMG_TEXT,7,7,406,44
+    CONTROL         "",IDC_DMG_LIST,"SysListView32",LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,7,55,406,150
+    LTEXT           "",IDC_DMG_COUNT,7,210,406,8
+    PUSHBUTTON      "Tick &Partly Overwritten",IDC_DMG_INCLUDEPARTIAL,7,229,90,14
+    PUSHBUTTON      "Tick &All",IDC_DMG_INCLUDEALL,101,229,50,14
+    PUSHBUTTON      "&Skip All Damaged",IDC_DMG_SKIPALL,155,229,70,14
+    DEFPUSHBUTTON   "&Continue",IDOK,295,229,58,14
+    PUSHBUTTON      "Cancel Recovery",IDCANCEL,357,229,56,14
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription", "RecoverAside - NTFS file and folder recovery"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "RecoverAside.exe"
+            VALUE "OriginalFilename", "RecoverAside.exe"
+            VALUE "ProductName", "RecoverAside"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

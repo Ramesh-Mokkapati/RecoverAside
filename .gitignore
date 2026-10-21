@@ -1,0 +1,47 @@
+# Build output
+bin/
+obj/
+dist/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+Win32/
+*.exe
+*.dll
+*.lib
+*.exp
+*.ilk
+*.pdb
+*.iobj
+*.ipdb
+*.obj
+*.pch
+*.res
+*.tlog
+*.lastbuildstate
+*.idb
+*.log
+
+# Visual Studio user / cache files
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.aps
+ipch/
+enc_temp_folder/
+
+# OS / editor clutter
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+
+# Local recovery output, in case it is ever written next to the source
+RecoverAside_*/
+RecoveryLog.txt
