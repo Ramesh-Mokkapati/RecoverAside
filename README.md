@@ -4,6 +4,10 @@ A Windows (MFC) utility that recovers deleted files and folders from NTFS drives
 damage to the disk being recovered**. The source disk is only ever read, and recovered data is only written
 to a different physical disk.
 
+## Screenshots
+
+![RecoverAside after scanning a drive: deleted folders and files with their original location, size and recoverability, all ticked, and a destination on a different physical disk](docs/screenshots/main-window.png)
+
 ## Features
 
 - **Explorer-style browsing.** The folder tree lists every NTFS drive and its existing folders as you expand
@@ -62,10 +66,12 @@ so the exe runs on its own. The project uses the default toolset of whichever Vi
 
 | Trigger | What happens |
 | --- | --- |
-| Push or pull request to `main`, or a manual run | Builds x64 and x86 with `build.ps1`, with compiler warnings treated as errors, and uploads the zips as build artifacts. |
-| Push of a tag such as `v1.0.0` | Same build, then publishes a GitHub release `v1.0.0` with `RecoverAside-1.0.0-x64.zip` and `RecoverAside-1.0.0-x86.zip`. |
+| Pull request to `main`, or a manual run | Builds x64 and x86 with `build.ps1`, with compiler warnings treated as errors, and uploads the zips as build artifacts. |
+| Push to `main` | Same build as version `1.0.<run number>`, then publishes a GitHub release `v1.0.<run number>` (the workflow creates the tag) with `RecoverAside-1.0.<run number>-x64.zip` and `-x86.zip`. The Deployments installer takes the x64 zip. |
+| Push of a tag such as `v1.2.0` | Same build, then publishes a GitHub release `v1.2.0` with `RecoverAside-1.2.0-x64.zip` and `RecoverAside-1.2.0-x86.zip`. |
 
-To cut a release:
+Each zip holds `RecoverAside.exe` and this README. To change the major or minor version of the automatic releases,
+edit `1.0.` in the workflow's *Work out version* step. To cut a release with a version of your own:
 
 ```bash
 git tag v1.0.0

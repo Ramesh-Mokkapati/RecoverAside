@@ -21,14 +21,20 @@ jobs:
         platform: [x64, x86]
     env:
       CI: 'true'    # compiler warnings are treated as errors (see RecoverAside.vcxproj)
+    # Same value from every platform, so whichever finishes last is fine.
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v4
 
+      # A pushed v* tag uses its own version; a push to main gets 1.0.<run number> and is released
+      # under v1.0.<run number>; anything else is a CI-only build.
       - name: Work out version
         id: version
         shell: pwsh
         run: |
           if ('${{ github.ref_type }}' -eq 'tag') { $v = '${{ github.ref_name }}'.TrimStart('v') }
+          elseif ('${{ github.event_name }}' -eq 'push' -and '${{ github.ref }}' -eq 'refs/heads/main') { $v = "1.0.${{ github.run_number }}" }
           else { $v = "0.0.0-ci.${{ github.run_number }}" }
           "value=$v" >> $env:GITHUB_OUTPUT
 
@@ -46,8 +52,11 @@ jobs:
   release:
     name: Publish release
     needs: build
-    if: github.ref_type == 'tag'
+    # Every pushed v* tag, and every push to main whose builds all pass.
+    if: github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', needs.build.outputs.version) }}
     permissions:
       contents: write
     steps:
@@ -59,4 +68,5 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${{ github.ref_name }}" dist/*.zip --repo "${{ github.repository }}" --title "RecoverAside ${{ github.ref_name }}" --generate-notes
+        # For a push to main, gh creates the tag on the commit that was built.
+        run: gh release create "$TAG" dist/*.zip --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "RecoverAside $TAG" --generate-notes --latest
